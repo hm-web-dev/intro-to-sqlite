@@ -5,7 +5,7 @@ import path from "path";
 import {Request, Response} from 'express';
 import sqlite3 from "sqlite3";
 const sqlite = sqlite3.verbose();
-const dbFile = path.join(__dirname, "foo.db");
+const dbFile = process.env.DB_PATH ?? 'foo.db';
 // below is the line for vanilla ES6 js to work; not necessary with typescript
 // const dbFile = path.join(path.dirname(fileURLToPath(import.meta.url)), "foo.db");
 const db = new sqlite.Database(dbFile, (error) => {
@@ -47,3 +47,18 @@ export const getUserById = (request: Request, response: Response) => {
 
 // ----- FILL IN BELOW -----
 // Write and export the rest of the functions needed by index.js!
+const createNewUser = (request: Request, response: Response) => {
+  const name = request.body.name;
+
+  // problems with db.exec() - doesn't sanitize if using exec() 
+  // const createQuery = `INSERT INTO user(name) VALUES (${name})`
+  // what if someone sent in Robert'); CREATE TABLE Person (PersonID Int);
+  // or worse... DROP TABLE user; ?  
+  // but can use db.run() to get the lastID to get the lastID inserted
+  const createQuery = "INSERT INTO user(name) VALUES (?)"
+  db.run(createQuery, [name], function (error) {
+    // create doesn't return anything 
+    error ? response.json({ error: error.message }) :
+      response.json({ result: "row id: " + this.lastID });
+  });
+};
